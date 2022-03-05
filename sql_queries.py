@@ -1,7 +1,7 @@
 import configparser
 
 
-# CONFIG
+# load config
 config = configparser.ConfigParser()
 config.read('dwh.cfg')
 
@@ -17,6 +17,7 @@ time_table_drop = "DROP TABLE if exists  time;"
 
 # CREATE TABLES
 
+# create table staging_events
 staging_events_table_create= ("""
 CREATE TABLE staging_events
   (
@@ -40,7 +41,7 @@ CREATE TABLE staging_events
      userid        VARCHAR
   ) ;
 """)
-
+# create table staging_songs
 staging_songs_table_create = ("""
 CREATE TABLE staging_songs
   (
@@ -57,7 +58,7 @@ CREATE TABLE staging_songs
   ); 
 
 """)
-
+# create table fact songplay
 songplay_table_create = ("""
 CREATE TABLE songplays
   (
@@ -72,7 +73,7 @@ CREATE TABLE songplays
      user_agent  VARCHAR
   ); 
 """)
-
+# create table dimentions users
 user_table_create = ("""
 CREATE TABLE users
   (
@@ -83,7 +84,7 @@ CREATE TABLE users
      level      VARCHAR NOT NULL 
   ); 
 """)
-
+# create table dimentions songs
 song_table_create = ("""
 CREATE TABLE songs
   (
@@ -94,7 +95,7 @@ CREATE TABLE songs
      duration  FLOAT NOT NULL
   ); 
 """)
-
+# create table dimentions artists
 artist_table_create = ("""
 CREATE TABLE artists
   (
@@ -105,7 +106,7 @@ CREATE TABLE artists
      longitude FLOAT
   ); 
 """)
-
+# create table dimentions time
 time_table_create = ("""
 CREATE TABLE time
   (
@@ -121,6 +122,7 @@ CREATE TABLE time
 
 # STAGING TABLES
 
+# load data to table staging_events from S3 aws
 staging_events_copy = ("""
       copy staging_events from {}
       credentials 'aws_iam_role={}'
@@ -128,6 +130,7 @@ staging_events_copy = ("""
       json {};
 """).format(config['S3']['LOG_DATA'],config['IAM_ROLE']['ARN'],config['S3']['LOG_JSONPATH'])
 
+# load data to table staging_songs from S3 aws
 staging_songs_copy = ("""
       copy staging_songs from {}
       credentials 'aws_iam_role={}'
@@ -136,7 +139,7 @@ staging_songs_copy = ("""
 """).format(config['S3']['SONG_DATA'],config['IAM_ROLE']['ARN'])
 
 # FINAL TABLES
-
+# Insert songplay table from staging_events and dimentions tables
 songplay_table_insert = ("""
 INSERT INTO songplays
             (
@@ -166,7 +169,7 @@ AND    a.length=c.duration
 JOIN   artists d
 ON     a.artist=d.NAME where page='NextSong';
 """)
-
+# Insert users table from staging_events where page='NextSong'
 user_table_insert = ("""
 INSERT INTO users
 SELECT distinct userid::int,
@@ -177,6 +180,7 @@ SELECT distinct userid::int,
 FROM   staging_events where page='NextSong'
 """)
 
+# Insert songs table from staging_songs
 song_table_insert = ("""
 INSERT INTO songs
 SELECT distinct song_id,
@@ -187,6 +191,7 @@ SELECT distinct song_id,
 FROM   staging_songs; 
 """)
 
+# Insert artists table from staging_songs
 artist_table_insert = ("""
 INSERT INTO artists
 SELECT distinct artist_id,
@@ -197,6 +202,7 @@ SELECT distinct artist_id,
 FROM   staging_songs
 """)
 
+# Insert time table from staging_events where page='NextSong'
 time_table_insert = ("""
 INSERT INTO time
 SELECT distinct (timestamp 'epoch' + ts/1000 * interval '1 second')::varchar,
