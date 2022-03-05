@@ -1,1 +1,7 @@
 dwh.cfg
+dwh2.cfg
+del_cluster.py
+run_cluster.py
+test.py
+cek_cluster.py
+__pycache__/**
