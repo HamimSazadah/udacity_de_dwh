@@ -58,13 +58,13 @@ CREATE TABLE staging_songs
   ); 
 
 """)
-# create table fact songplay
+# create table fact songplay,  with user_id as distkey and start_time as sortkey
 songplay_table_create = ("""
 CREATE TABLE songplays
   (
-     songplay_id BIGINT GENERATED ALWAYS AS IDENTITY(0,1) PRIMARY KEY,
-     start_time  VARCHAR NOT NULL,
-     user_id     INT NOT NULL,
+     songplay_id BIGINT GENERATED ALWAYS AS IDENTITY(0,1) PRIMARY KEY ,
+     start_time  VARCHAR NOT NULL sortkey,
+     user_id     INT NOT NULL distkey,
      level       VARCHAR NOT NULL,
      song_id     VARCHAR,
      artist_id   VARCHAR ,
@@ -73,44 +73,44 @@ CREATE TABLE songplays
      user_agent  VARCHAR
   ); 
 """)
-# create table dimentions users
+# create table dimentions users, with user_id as sortkey
 user_table_create = ("""
 CREATE TABLE users
   (
-     user_id    int NOT NULL PRIMARY KEY,
+     user_id    int NOT NULL PRIMARY KEY sortkey,
      first_name VARCHAR NOT NULL,
      last_name  VARCHAR NOT NULL,
      gender     VARCHAR NOT NULL,
      level      VARCHAR NOT NULL 
   ); 
 """)
-# create table dimentions songs
+# create table dimentions songs, with song_id as sortkey
 song_table_create = ("""
 CREATE TABLE songs
   (
-     song_id   VARCHAR NOT NULL PRIMARY KEY,
+     song_id   VARCHAR NOT NULL PRIMARY KEY sortkey,
      title     VARCHAR NOT NULL,
      artist_id VARCHAR NOT NULL,
      year      INT NOT NULL,
      duration  FLOAT NOT NULL
   ); 
 """)
-# create table dimentions artists
+# create table dimentions artists, with artist_id as sortkey
 artist_table_create = ("""
 CREATE TABLE artists
   (
-     artist_id VARCHAR NOT NULL PRIMARY KEY,
+     artist_id VARCHAR NOT NULL PRIMARY KEY sortkey,
      name      VARCHAR NOT NULL,
      location  VARCHAR,
      latitude  FLOAT,
      longitude FLOAT
   ); 
 """)
-# create table dimentions time
+# create table dimentions time, with start_time as sortkey
 time_table_create = ("""
 CREATE TABLE time
   (
-     start_time VARCHAR NOT NULL PRIMARY KEY,
+     start_time VARCHAR NOT NULL PRIMARY KEY sortkey,
      hour       INT NOT NULL,
      day        INT NOT NULL,
      week       INT NOT NULL,
@@ -154,20 +154,16 @@ INSERT INTO songplays
             )
 SELECT (timestamp 'epoch' + ts/1000 * interval '1 second')::varchar,
        userid::int,
-       b.level,
+       level,
        song_id,
-       d.artist_id,
+       artist_id,
        sessionid,
-       a.location,
+       location,
        useragent
 FROM   staging_events a
-JOIN   users b
-ON     a.userid=b.user_id
-JOIN   songs c
-ON     a.song=c.title
-AND    a.length=c.duration
-JOIN   artists d
-ON     a.artist=d.NAME where page='NextSong';
+JOIN   staging_songs b
+ON     a.artist = b.artist_name AND    a.length=b.duration 
+WHERE page='NextSong';
 """)
 # Insert users table from staging_events where page='NextSong'
 user_table_insert = ("""
