@@ -150,13 +150,13 @@ INSERT INTO songplays
                         user_agent
             )
 SELECT (timestamp 'epoch' + ts/1000 * interval '1 second')::varchar,
-       userid,
+       userid::int,
        b.level,
        song_id,
-       artist_id,
+       d.artist_id,
        sessionid,
-       location,
-       user_agent
+       a.location,
+       useragent
 FROM   staging_events a
 JOIN   users b
 ON     a.userid=b.user_id
@@ -164,22 +164,22 @@ JOIN   songs c
 ON     a.song=c.title
 AND    a.length=c.duration
 JOIN   artists d
-ON     a.artist=d.NAME;
+ON     a.artist=d.NAME where page='NextSong';
 """)
 
 user_table_insert = ("""
 INSERT INTO users
-SELECT userid,
+SELECT distinct userid::int,
        firstname,
        lastname,
        gender,
        level
-FROM   staging_events; 
+FROM   staging_events where page='NextSong'
 """)
 
 song_table_insert = ("""
 INSERT INTO songs
-SELECT song_id,
+SELECT distinct song_id,
        title,
        artist_id,
        year,
@@ -189,24 +189,24 @@ FROM   staging_songs;
 
 artist_table_insert = ("""
 INSERT INTO artists
-SELECT artist_id,
+SELECT distinct artist_id,
        artist_name,
        artist_location,
        artist_latitude,
        artist_longitude
-FROM   staging_songs; 
+FROM   staging_songs
 """)
 
 time_table_insert = ("""
 INSERT INTO time
-SELECT (timestamp 'epoch' + ts/1000 * interval '1 second')::varchar,
+SELECT distinct (timestamp 'epoch' + ts/1000 * interval '1 second')::varchar,
        extract (hour FROM timestamp 'epoch'  + ts/1000 * interval '1 second'),
        extract (day FROM timestamp 'epoch'   + ts/1000 * interval '1 second'),
        extract (week FROM timestamp 'epoch'  + ts/1000 * interval '1 second'),
        extract (month FROM timestamp 'epoch' + ts/1000 * interval '1 second'),
        extract (year FROM timestamp 'epoch'  + ts/1000 * interval '1 second'),
        extract (dow FROM timestamp 'epoch'   + ts/1000 * interval '1 second')
-FROM   PUBLIC.staging_events;
+FROM   staging_events where page='NextSong';
 """)
 
 # QUERY LISTS
@@ -214,4 +214,4 @@ FROM   PUBLIC.staging_events;
 create_table_queries = [staging_events_table_create, staging_songs_table_create, songplay_table_create, user_table_create, song_table_create, artist_table_create, time_table_create]
 drop_table_queries = [staging_events_table_drop, staging_songs_table_drop, songplay_table_drop, user_table_drop, song_table_drop, artist_table_drop, time_table_drop]
 copy_table_queries = [staging_events_copy, staging_songs_copy]
-insert_table_queries = [songplay_table_insert, user_table_insert, song_table_insert, artist_table_insert, time_table_insert]
+insert_table_queries = [user_table_insert, song_table_insert, artist_table_insert, time_table_insert,songplay_table_insert]
